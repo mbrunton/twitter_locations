@@ -1,4 +1,8 @@
+# Data Structures for use in Knowledge Technologies Project 1
+# Mitchell Brunton #537642
+# mmbrunton@gmail.com
 
+from helper import get_lines_from_raw_twitter_data
 
 class TwitterCorpus():
     def __init__(self, file):
@@ -6,7 +10,7 @@ class TwitterCorpus():
         id_to_tweet = {}
         index_to_id = {}
 
-        lines = fd.readlines()
+        lines = get_lines_from_raw_twitter_data(fd.read())
         for line in lines:
             fields = line.split('\t')
             tweet_id = fields[1]
@@ -48,18 +52,22 @@ class TwitterCorpus():
 
 
 class Trie():
-    def __init__(self, w, abc):
-        for a in w:
+    def __init__(self, s, abc):
+        if '\0' not in abc:
+            abc += '\0'
+        if len(set(abc)) != len(abc):
+            raise Exception('alphabet contains duplicates')
+        for a in s:
             if a not in abc:
-                raise Exception('alphabet does not contain letter ' + a)
-        self.w = w
+                raise Exception('alphabet does not contain char: ' + a)
+        self.s = s
         self.abc = abc
         self.root = TrieNode(abc, 0)
-        for i in range(len(w)):
-            self.root.add_suffix(w, i)
+        for i in range(len(s)):
+            self.root.add_suffix(s, i)
             
-    def get_matches(self, s, tolerance=0):
-        self.root.get_matches(self.w, s, tolerance)
+    def get_matches(self, q, tolerance=0):
+        return self.root.get_matches(self.s, q, tolerance)
         
 class TrieNode():
     def __init__(self, abc, depth):
@@ -69,37 +77,48 @@ class TrieNode():
         for a in abc:
             self.bs[a] = None
             
-    def add_suffix(self, w, i):
-        # i is index of start of suffix in w
-        first = w[i + self.depth]
+    def add_suffix(self, s, i):
+        # i is index of start of suffix in s
+        if i + self.depth >= len(s):
+            self.bs['\0'] = i
+            return
+        first = s[i + self.depth]
         if self.bs[first] == None:
             self.bs[first] = i
         elif type(self.bs[first]) == int:
             old_index = self.bs[first]
             self.bs[first] = TrieNode(self.abc, self.depth+1)
-            self.bs[first].add_suffix(w, old_index)
-            self.bs[first].add_suffix(w, i)
+            self.bs[first].add_suffix(s, old_index)
+            self.bs[first].add_suffix(s, i)
         else:
             # bs[first] is another Node
-            self.bs[first].add_suffix(w, i)
+            self.bs[first].add_suffix(s, i)
             
-    def get_matches(self, w, q):
-        if self.depth >= len(q):
-            return True
+    # TODO: include tolerance
+    def get_matches(self, s, q, tolerance):
+        if self.depth == len(q):
+            return self.scrape_node()
         first = q[self.depth]
         if self.bs[first] == None:
-            return False
+            return []
         elif type(self.bs[first]) == int:
-            lw = len(w)
+            ls = len(s)
             for i in range(len(q)):
-                j = bs[first] + i
-                if j >= lw:
-                    return False
-                if w[j] != q[i]:
-                    return False
-            return True
+                j = self.bs[first] + i
+                if j >= ls or s[j] != q[i]:
+                    return []
+            return [self.bs[first]]
         else:
-            return self.bs[first].get_matches(w, q)
+            return self.bs[first].get_matches(s, q, tolerance)
+
+    def scrape_node(self):
+        indices = []
+        for v in self.bs.values():
+            if type(v) == int:
+                indices.append(v)
+            elif type(v) == TrieNode:
+                indices += v.scrape_node()
+        return indices
 
 
 
