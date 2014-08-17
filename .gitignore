@@ -1,0 +1,5 @@
+# ignore file for Knowledge Technologies Project 1
+data/*
+specs/*
+*.swp
+*.pyc
