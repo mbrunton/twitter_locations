@@ -17,7 +17,12 @@ def find_nth(s, sub, n):
 
 # return list of lines of tweet rows
 # TODO: currently ignoring tweets with newlines in body
-def get_lines_from_raw_twitter_data(raw):
-    line_re = re.compile(r'[0-9]+\t[0-9]+\t[^\t]*\t[0-9\-]{10} [0-9:]{8}')
+def get_lines_from_raw_twitter_data(fd):
+    raw = fd.read()
+    line_re = re.compile(r'[0-9]+\t[0-9]+\t[^\t]+\t[0-9\-]{10} [0-9:]{8}')
     return line_re.findall(raw)
 
+def get_locations_from_raw_data(fd):
+    locations = [line.split('\t')[2].lower() for line in fd.readlines()]
+    locations = [re.sub(r'[.\-\']', '', loc) for loc in locations]
+    return locations

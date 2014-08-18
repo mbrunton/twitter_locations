@@ -10,15 +10,25 @@ class TwitterCorpus():
         id_to_tweet = {}
         index_to_id = {}
 
-        lines = get_lines_from_raw_twitter_data(fd.read())
+        # TODO: fix this method
+        lines = get_lines_from_raw_twitter_data(fd)
+        count = 0
+        percent = 0
+        ll = len(lines)
         for line in lines:
             fields = line.split('\t')
-            tweet_id = fields[1]
+            tweet_id = int(fields[1])
             tweet_text = fields[2]
             id_to_tweet[tweet_id] = tweet_text
+            if count % (ll/100) == 0:
+                print 'at ' + str(percent) + '%'
+                percent += 1
+            count += 1
 
         processed_tweets_list = []
         next_index = 0
+        count = 0
+        percent = 0
         for item in id_to_tweet.items():
             tweet_id = item[0]
             raw_tweet = item[1]
@@ -26,6 +36,10 @@ class TwitterCorpus():
             processed_tweet = self.process_tweet(raw_tweet)
             processed_tweets_list.append(processed_tweet)
             next_index += len(processed_tweet)
+            if count % (ll/100) == 0:
+                print 'at ' + str(percent) + '%'
+                percent += 1
+            count += 1
 
         self.id_to_tweet = id_to_tweet
         self.index_to_id = index_to_id
@@ -33,12 +47,14 @@ class TwitterCorpus():
         self.monolith_tweet_str = ''.join(processed_tweets_list)
 
     def process_tweet(self, tweet):
+        lt = len(tweet)
         processed_tweet = ''
         for a in tweet:
             if a.isalpha():
                 processed_tweet += a.lower()
             elif a.isspace():
                 processed_tweet += ' '
+
         return processed_tweet.strip() + ' '
 
     # index is within self.monolith_tweet_str
@@ -49,6 +65,10 @@ class TwitterCorpus():
         while index not in d:
             index -= 1
         return d[index]
+
+    def get_original_tweet_from_id(self, id):
+        if id in self.id_to_tweet:
+            return self.id_to_tweet[id]
 
 
 class Trie():
@@ -63,8 +83,13 @@ class Trie():
         self.s = s
         self.abc = abc
         self.root = TrieNode(abc, 0)
-        for i in range(len(s)):
+        ls = len(s)
+        percent = 0
+        for i in range(ls):
             self.root.add_suffix(s, i)
+            if i % (ls/100) == 0:
+                print 'at ' + str(percent) + '%'
+                percent += 1
             
     def get_matches(self, q, tolerance=0):
         return self.root.get_matches(self.s, q, tolerance)
