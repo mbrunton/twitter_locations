@@ -3,6 +3,9 @@
 # mmbrunton@gmail.com
 
 from helper import get_lines_from_raw_twitter_data
+from helper import equal
+from helper import edit_distance
+from helper import process_str
 
 class TwitterCorpus():
     def __init__(self, file):
@@ -12,50 +15,27 @@ class TwitterCorpus():
 
         # TODO: fix this method
         lines = get_lines_from_raw_twitter_data(fd)
-        count = 0
-        percent = 0
-        ll = len(lines)
         for line in lines:
             fields = line.split('\t')
             tweet_id = int(fields[1])
             tweet_text = fields[2]
             id_to_tweet[tweet_id] = tweet_text
-            if count % (ll/100) == 0:
-                print 'at ' + str(percent) + '%'
-                percent += 1
-            count += 1
 
         processed_tweets_list = []
         next_index = 0
-        count = 0
-        percent = 0
         for item in id_to_tweet.items():
             tweet_id = item[0]
             raw_tweet = item[1]
             index_to_id[next_index] = tweet_id
-            processed_tweet = self.process_tweet(raw_tweet)
+            processed_tweet = process_str(raw_tweet) + ' '
             processed_tweets_list.append(processed_tweet)
             next_index += len(processed_tweet)
-            if count % (ll/100) == 0:
-                print 'at ' + str(percent) + '%'
-                percent += 1
-            count += 1
 
         self.id_to_tweet = id_to_tweet
         self.index_to_id = index_to_id
         self.processed_tweets = processed_tweets_list
         self.monolith_tweet_str = ''.join(processed_tweets_list)
 
-    def process_tweet(self, tweet):
-        lt = len(tweet)
-        processed_tweet = ''
-        for a in tweet:
-            if a.isalpha():
-                processed_tweet += a.lower()
-            elif a.isspace():
-                processed_tweet += ' '
-
-        return processed_tweet.strip() + ' '
 
     # index is within self.monolith_tweet_str
     def get_id_from_index(self, index):
@@ -91,9 +71,15 @@ class Trie():
                 print 'at ' + str(percent) + '%'
                 percent += 1
             
-    def get_matches(self, q, tolerance=0):
-        return self.root.get_matches(self.s, q, tolerance)
+    def get_matches(self, q):
+        return self.root.get_matches(self.s, q)
+
+    def get_approximate_matches(self, q, tolerance=1):
+        return self.root.get_approximate_matches(self.s, q, tolerance)
         
+    def get_depth(self):
+        return self.root.get_subtrie_depth()
+
 class TrieNode():
     def __init__(self, abc, depth):
         self.abc = abc
@@ -119,9 +105,8 @@ class TrieNode():
             # bs[first] is another Node
             self.bs[first].add_suffix(s, i)
             
-    # TODO: include tolerance
-    def get_matches(self, s, q, tolerance):
-        if self.depth == len(q):
+    def get_matches(self, s, q):
+        if self.depth >= len(q):
             return self.scrape_node()
         first = q[self.depth]
         if self.bs[first] == None:
@@ -134,7 +119,46 @@ class TrieNode():
                     return []
             return [self.bs[first]]
         else:
-            return self.bs[first].get_matches(s, q, tolerance)
+            return self.bs[first].get_matches(s, q)
+
+    def get_approximate_matches(self, s, q, tol):
+        if tol == 0:
+            return self.get_matches(s, q)
+        # if tol >= len(q) - self.depth:
+        #     return self.scrape_node()
+        matches = []
+        try:
+            first = q[self.depth]
+        except IndexError:
+            first = None
+        for item in self.bs.items():
+            k = item[0]
+            v = item[1]
+            if v == None:
+                continue
+            elif type(v) == int:
+                # TODO: only want to bother with edit dist if we're at a certain depth maybe?
+                # find edit distance from s[v:??] to q
+                # if dist <= tol, add it to our bag
+                # TODO: should we be taking maximum edit dist over prefixes of s[v:v+len(q)]?
+                # next_non_alpha = s[v:].find(' ')
+                # if next_non_alpha < 0:
+                #     next_non_alpha = len(s)
+                # dist = edit_distance(s[v:v+next_non_alpha], q)
+                dist = edit_distance(s[v:v+len(q)], q)
+                next_space = s[v+len(q):].find(' ')
+                if next_space < 0:
+                    next_space = len(s) - (v+len(q))
+                if dist + next_space <= tol:
+                    matches.append(v)
+            else:
+                # v is a another node
+                child = v
+                tol_diff = equal(k, first)
+                matches += child.get_approximate_matches(s, q, tol-tol_diff)
+                # TODO: consider insertion and deletion as well
+                # need to have effective_level counter
+        return matches
 
     def scrape_node(self):
         indices = []
@@ -144,6 +168,16 @@ class TrieNode():
             elif type(v) == TrieNode:
                 indices += v.scrape_node()
         return indices
+
+    def get_subtrie_depth(self):
+        subnodes = [v for v in self.bs.values() if v is not None and type(v) != int]
+        if not subnodes:
+            return self.depth
+        return max(node.get_subtrie_depth() for node in subnodes)
+
+    # TODO
+    def get_longest_repeated_substring(self):
+        pass
 
 
 
