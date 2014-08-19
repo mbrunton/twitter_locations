@@ -129,7 +129,8 @@ class TrieNode():
 
     def get_approximate_matches(self, s, q, metric, tol, letter_groups=None, soundex_dict=None):
         if tol == 0:
-            return self.get_matches(s, q)
+            matches = self.get_matches(s, q)
+            return self.prune_matches(matches, s, q, metric, tol, letter_groups, soundex_dict)
         matches = []
         try:
             first = q[self.depth]
@@ -141,28 +142,40 @@ class TrieNode():
             if v == None:
                 continue
             elif type(v) == int:
-                # TODO: only want to bother with edit dist if we're at a certain depth maybe?
-                # find edit distance from s[v:??] to q
-                # if dist <= tol, add it to our bag
-                # TODO: should we be taking maximum edit dist over prefixes of s[v:v+len(q)]?
-                if metric == MetricType.EDIT_DIST:
-                    # debugging
-                    next_space = s[v+len(q):].find(' ')
-                    if next_space < 0:
-                        next_space = len(s) - (v+len(q))
-                    dist = edit_distance(s[v:v + next_space], q)
-                    if dist + next_space <= tol:
-                        matches.append(v)
-                elif metric == MetricType.EDITEX:
-                    pass
+                return [self.prune_matches([v], s, q, metric, tol, letter_groups, soundex_dict)]
             else:
                 # v is a another node
                 child = v
+                # TODO: should our equal function depend on metric type?
                 tol_diff = equal(k, first)
                 matches += child.get_approximate_matches(s, q, metric, tol-tol_diff)
                 # TODO: consider insertion and deletion as well
                 # need to have effective_level counter
         return matches
+
+    def prune_matches(self, matches, s, q, metric, tol, letter_groups, soundex_dict):
+        pruned = []
+        lq = len(q)
+        for m in matches:
+            next_space = m + lq + s[m + lq:].find(' ')
+            if next_space < 0:
+                next_space = len(s)
+            substring = s[m: next_space]
+            if metric == MetricType.EDIT_DIST:
+                dist = edit_distance(substring, q)
+                if dist <= tol:
+                    pruned.append(m)
+            elif metric == MetricType.EDITEX:
+                dist = editex(substring, q)
+                if dist <= tol:
+                    pruned.append(m)
+            else:
+                # metric == MetricType.Soundex
+                same_soundex = soundex(substring, q)
+                if same_soundex:
+                    pruned.append(v)
+        return pruned
+
 
     def scrape_node(self):
         indices = []

@@ -12,7 +12,7 @@
 from data_structures import TwitterCorpus, Trie
 from distance import MetricType
 from helper import get_locations_from_raw_data
-from configurations.py import *
+from configurations import *
 
 from string import ascii_lowercase
 from os.path import isfile
@@ -54,12 +54,12 @@ def main():
     print 'finished locations'
     print '-----------------------------------------------------------\n'
 
-    # print_matches(trie, 'fuck')
+    print_matches(trie, 'fuck')
     # print_original_tweet_matches(corpus, trie, 'fuck')
-    # print_approximate_matches(trie, 'fuck', 1)
+    # print_approximate_matches(trie, 'bull', MetricType.EDIT_DIST, 0)
     # print_original_tweet_approximate_matches(corpus, trie, 'fuck', 1)
 
-    # print 'trie depth: ' + str(trie.get_depth())
+    print 'trie depth: ' + str(trie.get_depth())
     found_locs = False
     for loc in locations:
         ms = trie.get_approximate_matches(loc, MetricType.EDIT_DIST, 0)
