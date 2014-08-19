@@ -50,7 +50,7 @@ class TwitterCorpus():
 
 
 class Trie():
-    def __init__(self, s, abc, new_word_substrings=False):
+    def __init__(self, s, abc, new_word_substrings):
         if '\0' not in abc:
             abc += '\0'
         if len(set(abc)) != len(abc):
@@ -62,15 +62,15 @@ class Trie():
         self.abc = abc
         self.root = TrieNode(abc, 0)
         ls = len(s)
-        one_percent = ls / 100
-        percent = 0
+        #one_percent = ls / 100
+        #percent = 0
         for i in range(ls):
             # are we using all substrings, or just those which start a new word
             if (not new_word_substrings) or i == 0 or (s[i-1].isspace() and s[i].isalpha()):
                 self.root.add_suffix(s, i, 0)
-            if i % one_percent == 0:
-                print 'at ' + str(percent) + '%'
-                percent += 1
+            #if i % one_percent == 0:
+            #    print 'at ' + str(percent) + '%'
+            #    percent += 1
 
     def get_matches(self, q, ends_in_space=False):
         return self.root.get_matches(self.s, q, 0, ends_in_space)
@@ -119,13 +119,21 @@ class TrieNode():
             if not ends_in_space:
                 return self.scrape_node()
             else:
-                return [self.bs[ch] for ch in (' ' + '\0') if type(self.bs[ch]) == int]
+                matches = []
+                if type(self.bs[' ']) == int:
+                    matches.append(self.bs[' '])
+                elif isinstance(self.bs[' '], TrieNode):
+                    matches += self.bs[' '].scrape_node()
+                if type(self.bs['\0']) == int:
+                    matches.append(self.bs['\0'])
+                return matches
         qchar = q[depth]
         if self.bs[qchar] == None:
             return []
         elif type(self.bs[qchar]) == int:
             ls = len(s)
             lq = len(q)
+            # TODO: can't we just check the last part of the strings?
             for i in range(lq):
                 j = self.bs[qchar] + i
                 if j >= ls or s[j] != q[i]:
@@ -139,8 +147,6 @@ class TrieNode():
             return self.bs[qchar].get_matches(s, q, depth+1, ends_in_space)
 
     def get_matches_within_dist(self, s, q, dist, depth, ends_in_space):
-        if q == 'attu':
-            k = 3
         if dist == 0:
             return self.get_matches(s, q, depth, ends_in_space)
         if depth >= len(q):
@@ -157,8 +163,7 @@ class TrieNode():
                 substring = s[sub_start: sub_end]
                 ed = edit_dist(substring, q[depth:])
                 if ed <= dist:
-                    j = sub_end + 1
-                    if (not ends_in_space) or j >= len(s) or (not s[j].isspace()):
+                    if (not ends_in_space) or sub_end >= len(s) or (not s[sub_end].isspace()):
                         matches.append(v)
             elif isinstance(v, TrieNode):
                 child = v

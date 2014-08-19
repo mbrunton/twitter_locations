@@ -59,7 +59,8 @@ def main():
     # print 'trie depth: ' + str(trie.get_depth())
 
     for loc in locations:
-        ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
+        #ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
+        ms = trie.get_matches(loc, ends_in_space=True)
         if ms:
             found_locs = True
             print 'FOUND MATCHES FOR: ' + loc
