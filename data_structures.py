@@ -3,9 +3,8 @@
 # mmbrunton@gmail.com
 
 from helper import get_lines_from_raw_twitter_data
-from helper import equal
-from helper import edit_distance
 from helper import process_str
+from distance import *
 
 class TwitterCorpus():
     def __init__(self, file):
@@ -36,7 +35,6 @@ class TwitterCorpus():
         self.processed_tweets = processed_tweets_list
         self.monolith_tweet_str = ''.join(processed_tweets_list)
 
-
     # index is within self.monolith_tweet_str
     def get_id_from_index(self, index):
         if index < 0:
@@ -52,7 +50,7 @@ class TwitterCorpus():
 
 
 class Trie():
-    def __init__(self, s, abc):
+    def __init__(self, s, abc, new_word_substrings=False):
         if '\0' not in abc:
             abc += '\0'
         if len(set(abc)) != len(abc):
@@ -64,18 +62,26 @@ class Trie():
         self.abc = abc
         self.root = TrieNode(abc, 0)
         ls = len(s)
+        one_percent = ls / 100
         percent = 0
         for i in range(ls):
-            self.root.add_suffix(s, i)
-            if i % (ls/100) == 0:
+            # are we using all substrings, or just those which start with beginnning of word
+            if not new_word_substrings or i == 0 or (s[i-1] == ' ' and s[i].isalpha()):
+                self.root.add_suffix(s, i)
+            if i % one_percent == 0:
                 print 'at ' + str(percent) + '%'
                 percent += 1
             
     def get_matches(self, q):
         return self.root.get_matches(self.s, q)
 
-    def get_approximate_matches(self, q, tolerance=1):
-        return self.root.get_approximate_matches(self.s, q, tolerance)
+    def get_approximate_matches(self, q, metric, tol):
+        if metric == MetricType.EDITEX:
+            letter_groups = get_editex_groups()
+            return self.root.get_approximate_matches(self.s, q, metric, tol, letter_groups=letter_groups)
+        elif metric == MetricType.SOUNDEX:
+            return self.root.get_approximate_matches(self.s, q, metric, tol, soundex_dict=soundex_dict)
+        return self.root.get_approximate_matches(self.s, q, metric, tol)
         
     def get_depth(self):
         return self.root.get_subtrie_depth()
@@ -121,11 +127,9 @@ class TrieNode():
         else:
             return self.bs[first].get_matches(s, q)
 
-    def get_approximate_matches(self, s, q, tol):
+    def get_approximate_matches(self, s, q, metric, tol, letter_groups=None, soundex_dict=None):
         if tol == 0:
             return self.get_matches(s, q)
-        # if tol >= len(q) - self.depth:
-        #     return self.scrape_node()
         matches = []
         try:
             first = q[self.depth]
@@ -141,21 +145,21 @@ class TrieNode():
                 # find edit distance from s[v:??] to q
                 # if dist <= tol, add it to our bag
                 # TODO: should we be taking maximum edit dist over prefixes of s[v:v+len(q)]?
-                # next_non_alpha = s[v:].find(' ')
-                # if next_non_alpha < 0:
-                #     next_non_alpha = len(s)
-                # dist = edit_distance(s[v:v+next_non_alpha], q)
-                dist = edit_distance(s[v:v+len(q)], q)
-                next_space = s[v+len(q):].find(' ')
-                if next_space < 0:
-                    next_space = len(s) - (v+len(q))
-                if dist + next_space <= tol:
-                    matches.append(v)
+                if metric == MetricType.EDIT_DIST:
+                    # debugging
+                    next_space = s[v+len(q):].find(' ')
+                    if next_space < 0:
+                        next_space = len(s) - (v+len(q))
+                    dist = edit_distance(s[v:v + next_space], q)
+                    if dist + next_space <= tol:
+                        matches.append(v)
+                elif metric == MetricType.EDITEX:
+                    pass
             else:
                 # v is a another node
                 child = v
                 tol_diff = equal(k, first)
-                matches += child.get_approximate_matches(s, q, tol-tol_diff)
+                matches += child.get_approximate_matches(s, q, metric, tol-tol_diff)
                 # TODO: consider insertion and deletion as well
                 # need to have effective_level counter
         return matches
