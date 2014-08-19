@@ -4,10 +4,10 @@ from data_structures import Trie
 from string import ascii_lowercase
 
 def main():
-    abc = ascii_lowercase + ' '
     s = 'hello there i love my silly mummy sillybugger silly'
+    abc = ''.join(set(s))
     trie = Trie(s, abc, True)
-    ms = trie.get_matches('silly', True)
+    ms = trie.get_matches_within_dist('silly', 1, True)
     print len(ms)
     for m in ms:
         print 'm = ' + str(m)

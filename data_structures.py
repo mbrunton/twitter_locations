@@ -116,17 +116,7 @@ class TrieNode():
 
     def get_matches(self, s, q, depth, ends_in_space):
         if depth == len(q):
-            if not ends_in_space:
-                return self.scrape_node()
-            else:
-                matches = []
-                if type(self.bs[' ']) == int:
-                    matches.append(self.bs[' '])
-                elif isinstance(self.bs[' '], TrieNode):
-                    matches += self.bs[' '].scrape_node()
-                if type(self.bs['\0']) == int:
-                    matches.append(self.bs['\0'])
-                return matches
+            return self.scrape_node(ends_in_space)
         qchar = q[depth]
         if self.bs[qchar] == None:
             return []
@@ -149,8 +139,8 @@ class TrieNode():
     def get_matches_within_dist(self, s, q, dist, depth, ends_in_space):
         if dist == 0:
             return self.get_matches(s, q, depth, ends_in_space)
-        if depth >= len(q):
-            return []
+        if depth == len(q):
+            return self.scrape_node(ends_in_space)
         qchar = q[depth]
         matches = []
         for item in self.bs.items():
@@ -175,68 +165,27 @@ class TrieNode():
                 eq = equal(schar, qchar)
                 matches += child.get_matches_within_dist(s, q, dist-eq, depth+1, ends_in_space)
         return matches
-                
-            
 
+    def scrape_node(self, ends_in_space):
+        if not ends_in_space:
+            return self.scrape_node_helper()
+        else:
+            matches = []
+            if type(self.bs[' ']) == int:
+                matches.append(self.bs[' '])
+            elif isinstance(self.bs[' '], TrieNode):
+                matches += self.bs[' '].scrape_node_helper()
+            if type(self.bs['\0']) == int:
+                matches.append(self.bs['\0'])
+            return matches
 
-
-    # def get_approximate_matches(self, s, q, metric, tol, letter_groups=None, soundex_dict=None):
-    #     if tol == 0:
-    #         matches = self.get_matches(s, q)
-    #         return self.prune_matches(matches, s, q, metric, tol, letter_groups, soundex_dict)
-    #     matches = []
-    #     try:
-    #         first = q[self.depth]
-    #     except IndexError:
-    #         first = None
-    #     for item in self.bs.items():
-    #         k = item[0]
-    #         v = item[1]
-    #         if v == None:
-    #             continue
-    #         elif type(v) == int:
-    #             return [self.prune_matches([v], s, q, metric, tol, letter_groups, soundex_dict)]
-    #         else:
-    #             # v is a another node
-    #             child = v
-    #             # TODO: should our equal function depend on metric type?
-    #             tol_diff = equal(k, first)
-    #             matches += child.get_approximate_matches(s, q, metric, tol-tol_diff)
-    #             # TODO: consider insertion and deletion as well
-    #             # need to have effective_level counter
-    #     return matches
-
-    # def prune_matches(self, matches, s, q, metric, tol, letter_groups, soundex_dict):
-    #     pruned = []
-    #     lq = len(q)
-    #     for m in matches:
-    #         next_space = m + lq + s[m + lq:].find(' ')
-    #         if next_space < 0:
-    #             next_space = len(s)
-    #         substring = s[m: next_space]
-    #         if metric == MetricType.EDIT_DIST:
-    #             dist = edit_distance(substring, q)
-    #             if dist <= tol:
-    #                 pruned.append(m)
-    #         elif metric == MetricType.EDITEX:
-    #             dist = editex(substring, q)
-    #             if dist <= tol:
-    #                 pruned.append(m)
-    #         else:
-    #             # metric == MetricType.Soundex
-    #             same_soundex = soundex(substring, q)
-    #             if same_soundex:
-    #                 pruned.append(v)
-    #     return pruned
-
-
-    def scrape_node(self):
+    def scrape_node_helper(self):
         indices = []
         for v in self.bs.values():
             if type(v) == int:
                 indices.append(v)
             elif isinstance(v, TrieNode):
-                indices += v.scrape_node()
+                indices += v.scrape_node_helper()
         return indices
 
     def get_subtrie_depth(self, depth):
