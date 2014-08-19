@@ -54,21 +54,18 @@ def main():
     print 'finished locations'
     print '-----------------------------------------------------------\n'
 
-    print_matches(trie, 'fuck')
+    # print_matches(trie, 'fuck')
     # print_original_tweet_matches(corpus, trie, 'fuck')
+    # print 'trie depth: ' + str(trie.get_depth())
 
-    print 'trie depth: ' + str(trie.get_depth())
-    found_locs = False
     for loc in locations:
-        ms = trie.get_matches_within_dist(loc, 1)
+        ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
         if ms:
             found_locs = True
             print 'FOUND MATCHES FOR: ' + loc
             for m in ms:
                 print trie.s[m:m + 3*len(loc)]
             print
-    if not found_locs:
-        print 'nothing found :('
 
 
 # FOR DEBUGGING
