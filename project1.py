@@ -56,13 +56,11 @@ def main():
 
     print_matches(trie, 'fuck')
     # print_original_tweet_matches(corpus, trie, 'fuck')
-    # print_approximate_matches(trie, 'bull', MetricType.EDIT_DIST, 0)
-    # print_original_tweet_approximate_matches(corpus, trie, 'fuck', 1)
 
     print 'trie depth: ' + str(trie.get_depth())
     found_locs = False
     for loc in locations:
-        ms = trie.get_approximate_matches(loc, MetricType.EDIT_DIST, 0)
+        ms = trie.get_matches_within_dist(loc, 1)
         if ms:
             found_locs = True
             print 'FOUND MATCHES FOR: ' + loc
@@ -90,22 +88,6 @@ def print_original_tweet_matches(corpus, trie, q):
         print 'original tweet: ' + orig
     print
 
-# FOR DEBUGGING
-def print_approximate_matches(trie, q, metric, tol):
-    ms = trie.get_approximate_matches(q, metric, tol)
-    for m in ms:
-        print trie.s[m:m + 3*len(q)]
-    print
-
-# FOR DEBUGGING
-def print_original_tweet_approximate_matches(corpus, trie, q, metric, tol):
-    ms = trie.get_approximate_matches(q, metric, tol)
-    for m in ms:
-        id = corpus.get_id_from_index(m)
-        print 'tweet id: ' + str(id)
-        orig = corpus.get_original_tweet_from_id(id)
-        print 'original tweet: ' + orig
-    print
 
 if __name__ == '__main__':
     main()

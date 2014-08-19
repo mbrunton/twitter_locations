@@ -14,7 +14,7 @@ class MetricType():
 
 # EDIT DISTANCE
 # returns the standard edit distance between two strings
-def edit_distance(s, t):
+def edit_dist(s, t):
     if len(s) == 0:
         return len(t)
     if len(t) == 0:
