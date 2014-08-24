@@ -27,9 +27,7 @@ def main():
     if USING_PICKLES:
         sys.setrecursionlimit(10000)
         argv = sys.argv
-        reset = False
-        if argv and argv[0] == '--reset-pickes':
-            reset = True
+        reset = argv and (argv[0] == '--reset-pickes')
 
         if not reset and isfile(TWITTER_PICKLE_FILE):
             corpus = cPickle.load(open(TWITTER_PICKLE_FILE, 'r'))
@@ -59,15 +57,14 @@ def main():
     # print 'trie depth: ' + str(trie.get_depth())
 
     for loc in locations:
-        ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
-        #ms = trie.get_matches(loc, ends_in_space=True)
+        ms = trie.get_matches_within_dist(loc, 0, ends_in_space=True)
+        #ms = trie.get_matches(loc, ends_in_space=False)
         if ms:
             found_locs = True
             print 'FOUND MATCHES FOR: ' + loc
             for m in ms:
                 print trie.s[m:m + 3*len(loc)]
             print
-
 
 # FOR DEBUGGING
 def print_matches(trie, q):

@@ -62,30 +62,18 @@ class Trie():
         self.abc = abc
         self.root = TrieNode(abc, 0)
         ls = len(s)
-        #one_percent = ls / 100
-        #percent = 0
         for i in range(ls):
             # are we using all substrings, or just those which start a new word
             if (not new_word_substrings) or i == 0 or (s[i-1].isspace() and s[i].isalpha()):
                 self.root.add_suffix(s, i, 0)
-            #if i % one_percent == 0:
-            #    print 'at ' + str(percent) + '%'
-            #    percent += 1
 
     def get_matches(self, q, ends_in_space=False):
         return self.root.get_matches(self.s, q, 0, ends_in_space)
 
     def get_matches_within_dist(self, q, dist, ends_in_space=False):
-        return self.root.get_matches_within_dist(self.s, q, dist, 0, ends_in_space)
+        ms = self.root.get_matches_within_dist(self.s, q, dist, 0, ends_in_space)
+        return list(set(ms))
 
-    # def get_approximate_matches(self, q, metric, tol):
-    #     if metric == MetricType.EDITEX:
-    #         letter_groups = get_editex_groups()
-    #         return self.root.get_approximate_matches(self.s, q, metric, tol, letter_groups=letter_groups)
-    #     elif metric == MetricType.SOUNDEX:
-    #         return self.root.get_approximate_matches(self.s, q, metric, tol, soundex_dict=soundex_dict)
-    #     return self.root.get_approximate_matches(self.s, q, metric, tol)
-        
     def get_depth(self):
         return self.root.get_subtrie_depth(0)
 
@@ -123,9 +111,8 @@ class TrieNode():
         elif type(self.bs[qchar]) == int:
             ls = len(s)
             lq = len(q)
-            # TODO: can't we just check the last part of the strings?
-            for i in range(lq):
-                j = self.bs[qchar] + i
+            for i in range(depth, lq):
+                j = self.bs[qchar] + self.true_depth + i
                 if j >= ls or s[j] != q[i]:
                     return []
             j = self.bs[qchar] + lq
@@ -137,8 +124,6 @@ class TrieNode():
             return self.bs[qchar].get_matches(s, q, depth+1, ends_in_space)
 
     def get_matches_within_dist(self, s, q, dist, depth, ends_in_space):
-        if dist == 0:
-            return self.get_matches(s, q, depth, ends_in_space)
         if depth == len(q):
             return self.scrape_node(ends_in_space)
         qchar = q[depth]
@@ -153,17 +138,23 @@ class TrieNode():
                 substring = s[sub_start: sub_end]
                 ed = edit_dist(substring, q[depth:])
                 if ed <= dist:
-                    if (not ends_in_space) or sub_end >= len(s) or (not s[sub_end].isspace()):
+                    # TODO: space might occur before s[sub_end]
+                    if (not ends_in_space) or sub_end >= len(s) or s[sub_end].isspace():
                         matches.append(v)
             elif isinstance(v, TrieNode):
                 child = v
-                # insert schar
-                matches += child.get_matches_within_dist(s, q, dist-1, depth, ends_in_space)
-                # delete qchar
-                matches += self.get_matches_within_dist(s, q, dist-1, depth+1, ends_in_space)
-                # replace qchar with schar
                 eq = equal(schar, qchar)
-                matches += child.get_matches_within_dist(s, q, dist-eq, depth+1, ends_in_space)
+                if dist > 0:
+                    # insert schar
+                    matches += child.get_matches_within_dist(s, q, dist-1, depth, ends_in_space)
+                    # delete qchar
+                    matches += self.get_matches_within_dist(s, q, dist-1, depth+1, ends_in_space)
+                    # replace qchar with schar
+                    matches += child.get_matches_within_dist(s, q, dist-eq, depth+1, ends_in_space)
+                elif eq == 0:
+                    # match qchar and schar
+                    matches += child.get_matches_within_dist(s, q, dist, depth+1, ends_in_space)
+
         return matches
 
     def scrape_node(self, ends_in_space):
