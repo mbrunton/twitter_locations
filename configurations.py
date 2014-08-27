@@ -4,23 +4,37 @@
 #
 # Configurable settings
 
+# files containing raw tweets
+tweet_files = ['/home/subjects/comp90049/2014-sm2/project1/tweets/training_set_tweets.txt',
+        'data/training_set_tweets.txt', 
+        'data/tweets100.txt', 
+        'data/tweets1000.txt', 
+        'data/tweets10000.txt',
+        'data/tweets100000.txt',
+        'data/tweets1mil.txt']
 
-# file containing raw tweets
-# TWEET_FILE = '/home/subjects/comp90049/2014-sm2/project1/tweets/training_set_tweets.txt'
-# TWEET_FILE = 'data/tweets1mil.txt'
-# TWEET_FILE = 'data/training_set_tweets.txt'
-# TWEET_FILE = 'data/tweets100.txt'
-TWEET_FILE = 'data/tweets1000.txt'
+class TweetFile():
+    UNIMELB_SERVER, ENTIRE, HUND, THOU, TEN_THOU, HUND_THOU, MIL\
+            = range(len(tweet_files))
 
-# file containing raw US location data
-# LOCATION_FILE = '/home/subjects/comp90049/2014-sm2/project1/geo.../US.txt'
-LOCATION_FILE = 'data/US1000.txt'
-# LOCATION_FILE = 'data/US.txt'
+# files containing raw US location data
+loc_files = ['/home/subjects/comp90049/2014-sm2/project1/geonames/US.txt',
+        'data/US1000.txt',
+        'data/US10000.txt',
+        'data/US100000.txt',
+        'data/US.txt']
 
+class LocFile():
+    UNIMELB_SERVER, THOU, TEN_THOU, HUND_THOU, ENTIRE\
+            = range(len(loc_files))
+
+# file containing twitter user ids and location
+USER_FILE = 'data/training_set_users.txt'
+
+# pickling
+USING_PICKLES = False
 TWITTER_PICKLE_FILE = 'pickles/corpus'
 TRIE_PICKLE_FILE = 'pickles/trie'
-
-USING_PICKLES = False
 
 # do we only want substrings in our trie which start with a new word
 NEW_WORD_SUBSTRINGS = True

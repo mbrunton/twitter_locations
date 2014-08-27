@@ -3,50 +3,76 @@
 # mmbrunton@gmail.com
 
 from helper import get_lines_from_raw_twitter_data
-from helper import process_str
+from helper import reduce_str, process_loc
 from distance import edit_dist, equal
 
 class TwitterCorpus():
-    def __init__(self, file):
-        fd = open(file, 'r')
+    def __init__(self, tweet_file_index, user_file):
         id_to_tweet = {}
         index_to_id = {}
+        id_to_loc = {}
 
-        # TODO: fix this method
-        lines = get_lines_from_raw_twitter_data(fd)
+        user_fd = open(user_file, 'r')
+        user_id_to_loc = {}
+        for line in user_fd.readlines():
+            fields = line.split('\t')
+            user_id = int(fields[0])
+            loc = process_loc(fields[1])
+            user_id_to_loc[user_id] = loc
+
+        lines = get_lines_from_raw_twitter_data(tweet_file_index)
+        tweets = []
+        next_index = 0
         for line in lines:
             fields = line.split('\t')
+            user_id = int(fields[0])
             tweet_id = int(fields[1])
-            tweet_text = fields[2]
-            id_to_tweet[tweet_id] = tweet_text
+            tweet_text = reduce_str(fields[2]) + ' '
+            tweets.append(tweet_text)
 
-        processed_tweets_list = []
-        next_index = 0
-        for item in id_to_tweet.items():
-            tweet_id = item[0]
-            raw_tweet = item[1]
+            id_to_tweet[tweet_id] = tweet_text
+            id_to_loc[tweet_id] = user_id_to_loc[user_id]
             index_to_id[next_index] = tweet_id
-            processed_tweet = process_str(raw_tweet) + ' '
-            processed_tweets_list.append(processed_tweet)
-            next_index += len(processed_tweet)
+            next_index += len(tweet_text)
 
         self.id_to_tweet = id_to_tweet
         self.index_to_id = index_to_id
-        self.processed_tweets = processed_tweets_list
-        self.monolith_tweet_str = ''.join(processed_tweets_list)
+        self.id_to_loc = id_to_loc
+        self.monolith_tweet_str = ''.join(tweets)
 
-    # index is within self.monolith_tweet_str
     def get_id_from_index(self, index):
+        start_index = self.get_tweet_start_index_from_index(index)
+        return self.index_to_id[start_index]
+
+    def get_tweet_start_index_from_index(self, index):
         if index < 0:
             return None
         d = self.index_to_id
         while index not in d:
             index -= 1
-        return d[index]
+        return index
 
-    def get_original_tweet_from_id(self, id):
+    def get_tweet_from_id(self, id):
         if id in self.id_to_tweet:
             return self.id_to_tweet[id]
+
+    def get_location_from_id(self, id):
+        if id in self.id_to_loc:
+            return self.id_to_loc[id]
+
+    def get_accuracy(self, ms, loc):
+        if not ms:
+            return 0.
+        correct = 0.
+        for m in ms:
+            id = self.get_id_from_index(m)
+            true_loc = self.get_location_from_id(id)
+            if true_loc == loc:
+                correct += 1.
+        return correct / len(ms)
+
+    def get_num_tweets(self):
+        return len(self.id_to_tweet.items())
 
 
 class Trie():

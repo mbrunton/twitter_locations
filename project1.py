@@ -12,6 +12,7 @@
 from data_structures import TwitterCorpus, Trie
 from distance import MetricType
 from helper import get_locations_from_raw_data
+from validate import validate_matches
 from configurations import *
 
 from string import ascii_lowercase
@@ -22,17 +23,18 @@ import sys
 
 
 def main():
+    sys.setrecursionlimit(10000)
     abc = ascii_lowercase + ' '
+    tweet_file = TweetFile.HUND_THOU
+    loc_file = LocFile.HUND_THOU
 
     if USING_PICKLES:
-        sys.setrecursionlimit(10000)
         argv = sys.argv
         reset = argv and (argv[0] == '--reset-pickes')
-
         if not reset and isfile(TWITTER_PICKLE_FILE):
             corpus = cPickle.load(open(TWITTER_PICKLE_FILE, 'r'))
         else:
-            corpus = TwitterCorpus(TWEET_FILE)
+            corpus = TwitterCorpus(tweet_file, USER_FILE)
             cPickle.dump(corpus, open(TWITTER_PICKLE_FILE, 'w'))
         print 'finished twitter corpus'
 
@@ -43,44 +45,48 @@ def main():
             cPickle.dump(trie, open(TRIE_PICKLE_FILE, 'w'))
         print 'finished trie'
     else:
-        corpus = TwitterCorpus(TWEET_FILE)
+        corpus = TwitterCorpus(tweet_file, USER_FILE)
         print 'finished twitter corpus'
         trie = Trie(corpus.monolith_tweet_str, abc, new_word_substrings=NEW_WORD_SUBSTRINGS)
         print 'finished trie'
 
-    locations = get_locations_from_raw_data(open(LOCATION_FILE, 'r'))
+    locations = get_locations_from_raw_data(loc_file)
     print 'finished locations'
     print '-----------------------------------------------------------\n'
 
-    # print_matches(trie, 'fuck')
-    # print_original_tweet_matches(corpus, trie, 'fuck')
-    # print 'trie depth: ' + str(trie.get_depth())
-
+    print 'number of locations: ' + str(len(locations))
+    print 'number of tweets: ' + str(corpus.get_num_tweets())
+    i = 0
+    loc_matches = []
     for loc in locations:
-        ms = trie.get_matches_within_dist(loc, 0, ends_in_space=True)
-        #ms = trie.get_matches(loc, ends_in_space=False)
+        print 'matches for ' + loc + '...'
+        ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
         if ms:
-            found_locs = True
-            print 'FOUND MATCHES FOR: ' + loc
             for m in ms:
-                print trie.s[m:m + 3*len(loc)]
+                id = corpus.get_id_from_index(m)
+                tweet = corpus.get_tweet_from_id(id)
+                print tweet
             print
+        loc_matches.append( (loc, ms) )
+        i += 1
+        print 'number of locations processed: ' + str(i)
+
 
 # FOR DEBUGGING
-def print_matches(trie, q):
+def print_substring_matches(trie, q):
     ms = trie.get_matches(q)
     for m in ms:
         print trie.s[m:m + 3*len(q)]
     print
 
 # FOR DEBUGGING
-def print_original_tweet_matches(corpus, trie, q):
+def print_tweet_matches(corpus, trie, q):
     ms = trie.get_matches(q)
     for m in ms:
         id = corpus.get_id_from_index(m)
         print 'tweet id: ' + str(id)
-        orig = corpus.get_original_tweet_from_id(id)
-        print 'original tweet: ' + orig
+        tweet = corpus.get_tweet_from_id(id)
+        print 'tweet: ' + tweet
     print
 
 
