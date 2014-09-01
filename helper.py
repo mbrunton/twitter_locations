@@ -31,9 +31,17 @@ def get_locations_from_raw_data(loc_file):
         locs.append(process_loc(raw_loc))
     return locs
 
+def get_locations_from_parsed_data(loc_file):
+    fd = open(loc_file, 'r')
+    locs = []
+    for line in fd.readlines():
+        locs.append(line.strip())
+    return locs
+
 # remove anything in location name that isn't strictly part of it i.e '(historical)'
 def process_loc(loc):
     new_loc = re.sub(r'\(.+\)', '', loc)
+    new_loc = re.sub(r'Historical Marker', '', loc)
     new_loc = reduce_str(new_loc)
     return new_loc
 
@@ -44,5 +52,5 @@ def reduce_str(s):
     for a in s:
         if a.isalpha() or a == ' ':
             p += a.lower()
-    return p
+    return p.strip()
 

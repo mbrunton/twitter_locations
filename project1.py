@@ -11,10 +11,9 @@
 
 from data_structures import TwitterCorpus, Trie
 from distance import MetricType
-from helper import get_locations_from_raw_data
-from validate import validate_matches
+from helper import *
+from post_processing import *
 from configurations import *
-
 from string import ascii_lowercase
 from os.path import isfile
 import cPickle
@@ -40,29 +39,12 @@ def main():
     else:
         out_file = None
 
-    # TODO: remove pickling
-    if USING_PICKLES:
-        if not RESET_PICKLES and isfile(TWITTER_PICKLE_FILE):
-            corpus = cPickle.load(open(TWITTER_PICKLE_FILE, 'r'))
-        else:
-            corpus = TwitterCorpus(tweet_file, USER_FILE)
-            cPickle.dump(corpus, open(TWITTER_PICKLE_FILE, 'w'))
-        print 'finished twitter corpus'
+    corpus = TwitterCorpus(tweet_file, USER_FILE)
+    print 'finished twitter corpus'
+    trie = Trie(corpus.monolith_tweet_str, abc, new_word_substrings=NEW_WORD_SUBSTRINGS)
+    print 'finished trie'
 
-        if not RESET_PICKLES and isfile(TRIE_PICKLE_FILE):
-            trie = cPickle.load(open(TRIE_PICKLE_FILE, 'r'))
-        else:
-            trie = Trie(corpus.monolith_tweet_str, abc, new_word_substrings=NEW_WORD_SUBSTRINGS)
-            cPickle.dump(trie, open(TRIE_PICKLE_FILE, 'w'))
-        print 'finished trie'
-    else:
-        corpus = TwitterCorpus(tweet_file, USER_FILE)
-        print 'finished twitter corpus'
-        trie = Trie(corpus.monolith_tweet_str, abc, new_word_substrings=NEW_WORD_SUBSTRINGS)
-        print 'finished trie'
-    return
-
-    locations = get_locations_from_raw_data(loc_file)
+    locations = get_locations_from_parsed_data(loc_file)
     print 'finished locations'
     print '-----------------------------------------------------------\n'
 
@@ -73,15 +55,31 @@ def main():
     for loc in locations:
         #print 'matches for ' + loc + '...'
         ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
-        if ms:
-            for m in ms:
-                id = corpus.get_id_from_index(m)
-                tweet = corpus.get_tweet_from_id(id)
-                print tweet
-            print
+        for m in ms:
+            m.set_string(corpus.monolith_tweet_str[m.index: m.index+m.length])
+            id = corpus.get_id_from_index(m.index)
+            m.set_tweet_id(id)
+            m.set_loc(loc)
+            m.set_true_loc(corpus.get_location_from_id(id))
+            print m.string + ' matches ' + m.loc
+            #tweet = corpus.get_tweet_from_id(id)
+            #print tweet
         loc_matches.append( (loc, ms) )
         i += 1
         #print 'number of locations processed: ' + str(i)
+    print 'finished finding matches'
+
+    # post processing
+    per = 0.05
+    stopword_per_to_accuracy = {}
+    while per < 1.00:
+        stopwords = generate_stopwords(corpus.monolith_tweet_str, per=per)
+        pruned_loc_matches = remove_stopwords(loc_matches, stopwords)
+        print 'stopword percentage: ' + str(per * 100) + '%'
+        accuracy = get_accuracy(pruned_loc_matches)
+        print 'accuracy after pruning: ' + str(accuracy * 100) + '%'
+        stopword_per_to_accuracy[per] = accuracy
+        per += 0.05
 
     if out_file:
         out_fd = open(out_file, 'w')

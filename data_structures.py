@@ -48,9 +48,7 @@ class TwitterCorpus():
         if index < 0:
             return None
         d = self.index_to_id
-        while index not in d:
-            index -= 1
-        return index
+        return max(k for k in d.keys() if k <= index)
 
     def get_tweet_from_id(self, id):
         if id in self.id_to_tweet:
@@ -59,17 +57,6 @@ class TwitterCorpus():
     def get_location_from_id(self, id):
         if id in self.id_to_loc:
             return self.id_to_loc[id]
-
-    def get_accuracy(self, ms, loc):
-        if not ms:
-            return 0.
-        correct = 0.
-        for m in ms:
-            id = self.get_id_from_index(m)
-            true_loc = self.get_location_from_id(id)
-            if true_loc == loc:
-                correct += 1.
-        return correct / len(ms)
 
     def get_num_tweets(self):
         return len(self.id_to_tweet.items())
@@ -143,7 +130,9 @@ class TrieNode():
                     return []
             j = self.bs[qchar] + lq
             if (not ends_in_space) or j >= s or (not s[j].isspace()):
-                return [self.bs[qchar]]
+                index = self.bs[qchar]
+                length = self.true_depth
+                return [Match(index, length)]
             else:
                 return []
         else:
@@ -154,6 +143,9 @@ class TrieNode():
             return self.scrape_node(ends_in_space)
         qchar = q[depth]
         matches = []
+        if dist > 0:
+            # add matches for deleting qchar
+            matches += self.get_matches_within_dist(s, q, dist-1, depth+1, ends_in_space)
         for item in self.bs.items():
             schar = item[0]
             v = item[1]
@@ -166,21 +158,20 @@ class TrieNode():
                 if ed <= dist:
                     # TODO: space might occur before s[sub_end]
                     if (not ends_in_space) or sub_end >= len(s) or s[sub_end].isspace():
-                        matches.append(v)
+                        index = v
+                        length = self.true_depth
+                        matches.append(Match(index, length))
             elif isinstance(v, TrieNode):
                 child = v
                 eq = equal(schar, qchar)
                 if dist > 0:
                     # insert schar
                     matches += child.get_matches_within_dist(s, q, dist-1, depth, ends_in_space)
-                    # delete qchar
-                    matches += self.get_matches_within_dist(s, q, dist-1, depth+1, ends_in_space)
                     # replace qchar with schar
                     matches += child.get_matches_within_dist(s, q, dist-eq, depth+1, ends_in_space)
                 elif eq == 0:
                     # match qchar and schar
                     matches += child.get_matches_within_dist(s, q, dist, depth+1, ends_in_space)
-
         return matches
 
     def scrape_node(self, ends_in_space):
@@ -189,20 +180,29 @@ class TrieNode():
         else:
             matches = []
             if type(self.bs[' ']) == int:
-                matches.append(self.bs[' '])
+                index = self.bs[' ']
+                length = self.true_depth
+                matches.append(Match(index, length))
             elif isinstance(self.bs[' '], TrieNode):
-                matches += self.bs[' '].scrape_node_helper()
+                matches += self.bs[' '].scrape_node_helper(match_length=self.true_depth)
             if type(self.bs['\0']) == int:
-                matches.append(self.bs['\0'])
+                index = self.bs['\0']
+                length = self.true_depth
+                matches.append(Match(index, length))
             return matches
 
-    def scrape_node_helper(self):
+    def scrape_node_helper(self, match_length=None):
         indices = []
         for v in self.bs.values():
             if type(v) == int:
-                indices.append(v)
+                index = v
+                if match_length:
+                    length = match_length
+                else:
+                    length = self.true_depth
+                indices.append(Match(index, length))
             elif isinstance(v, TrieNode):
-                indices += v.scrape_node_helper()
+                indices += v.scrape_node_helper(match_length=match_length)
         return indices
 
     def get_subtrie_depth(self, depth):
@@ -210,5 +210,28 @@ class TrieNode():
         if not subnodes:
             return depth
         return max(node.get_subtrie_depth(depth+1) for node in subnodes)
+
+class Match():
+    def __init__(self, index, length, string=None, tweet_id=None, loc=None, true_loc=None):
+        self.index = index
+        self.length = length
+        self.string = string
+        self.tweet_id = tweet_id
+        self.loc = loc # this is the query which we've matched
+        self.true_loc = true_loc # this is the location where the tweeter is
+
+    def set_string(self, string):
+        self.string = string
+
+    def set_tweet_id(self, tweet_id):
+        self.tweet_id = tweet_id
+
+    def set_loc(self, loc):
+        self.loc = loc
+
+    def set_true_loc(self, true_loc):
+        self.true_loc = true_loc
+
+
 
 
