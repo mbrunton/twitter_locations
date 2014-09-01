@@ -20,25 +20,36 @@ from os.path import isfile
 import cPickle
 import re
 import sys
+from marisa_trie import Trie as MarisaTrie
 
 
 def main():
-    sys.setrecursionlimit(10000)
+    sys.setrecursionlimit(1000000)
     abc = ascii_lowercase + ' '
-    tweet_file = TweetFile.HUND_THOU
-    loc_file = LocFile.HUND_THOU
 
+    argv = sys.argv
+    if len(argv) != 3 and len(argv) != 4:
+        print 'usage: python ' + argv[0] + ' ',
+        print '<tweet file> <location file> ',
+        print '(optional) <output file>'
+        exit()
+    tweet_file = argv[1]
+    loc_file = argv[2]
+    if len(argv) == 4:
+        out_file = argv[3]
+    else:
+        out_file = None
+
+    # TODO: remove pickling
     if USING_PICKLES:
-        argv = sys.argv
-        reset = argv and (argv[0] == '--reset-pickes')
-        if not reset and isfile(TWITTER_PICKLE_FILE):
+        if not RESET_PICKLES and isfile(TWITTER_PICKLE_FILE):
             corpus = cPickle.load(open(TWITTER_PICKLE_FILE, 'r'))
         else:
             corpus = TwitterCorpus(tweet_file, USER_FILE)
             cPickle.dump(corpus, open(TWITTER_PICKLE_FILE, 'w'))
         print 'finished twitter corpus'
 
-        if not reset and isfile(TRIE_PICKLE_FILE):
+        if not RESET_PICKLES and isfile(TRIE_PICKLE_FILE):
             trie = cPickle.load(open(TRIE_PICKLE_FILE, 'r'))
         else:
             trie = Trie(corpus.monolith_tweet_str, abc, new_word_substrings=NEW_WORD_SUBSTRINGS)
@@ -49,6 +60,7 @@ def main():
         print 'finished twitter corpus'
         trie = Trie(corpus.monolith_tweet_str, abc, new_word_substrings=NEW_WORD_SUBSTRINGS)
         print 'finished trie'
+    return
 
     locations = get_locations_from_raw_data(loc_file)
     print 'finished locations'
@@ -59,7 +71,7 @@ def main():
     i = 0
     loc_matches = []
     for loc in locations:
-        print 'matches for ' + loc + '...'
+        #print 'matches for ' + loc + '...'
         ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
         if ms:
             for m in ms:
@@ -69,7 +81,17 @@ def main():
             print
         loc_matches.append( (loc, ms) )
         i += 1
-        print 'number of locations processed: ' + str(i)
+        #print 'number of locations processed: ' + str(i)
+
+    if out_file:
+        out_fd = open(out_file, 'w')
+        for loc_match in loc_matches:
+            loc = loc_match[0]
+            out_fd.write(loc + '\n')
+            ms = loc_match[1]
+            for m in ms:
+                out_fd.write(str(m) + '\n')
+        out_fd.close()
 
 
 # FOR DEBUGGING

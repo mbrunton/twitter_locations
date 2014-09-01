@@ -212,5 +212,3 @@ class TrieNode():
         return max(node.get_subtrie_depth(depth+1) for node in subnodes)
 
 
-
-
