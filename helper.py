@@ -23,6 +23,7 @@ def get_lines_from_raw_twitter_data(tweet_file):
     line_re = re.compile(r'[0-9]+\t[0-9]+\t[^\t]+\t[0-9\-]{10} [0-9:]{8}')
     return line_re.findall(raw)
 
+# for format of US.txt
 def get_locations_from_raw_data(loc_file):
     fd = open(loc_file, 'r')
     locs = []
@@ -31,11 +32,10 @@ def get_locations_from_raw_data(loc_file):
         locs.append(process_loc(raw_loc))
     return locs
 
+# for format of one processed location per line
 def get_locations_from_parsed_data(loc_file):
     fd = open(loc_file, 'r')
-    locs = []
-    for line in fd.readlines():
-        locs.append(line.strip())
+    locs = [line.strip() for line in fd.readlines()]
     return locs
 
 # remove anything in location name that isn't strictly part of it i.e '(historical)'

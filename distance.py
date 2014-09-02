@@ -7,11 +7,6 @@
 
 from string import ascii_lowercase
 
-
-class MetricType():
-	EDIT_DIST, EDITEX, SOUNDEX  = range(3)
-	
-
 # EDIT DISTANCE
 # returns the standard edit distance between two strings
 def edit_dist(s, t):
@@ -98,7 +93,7 @@ def soundex(s, t, d):
 	return sx == tx
 	
 def get_soundex_dict():
-    abc = ascii_lowercase + ' '
+    abc = ascii_lowercase[:] + ' '
     d = {}
     for c in abc:
         if c in 'aeiouhwy':

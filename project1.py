@@ -10,7 +10,6 @@
 
 
 from data_structures import TwitterCorpus, Trie
-from distance import MetricType
 from helper import *
 from post_processing import *
 from configurations import *
@@ -54,6 +53,7 @@ def main():
     loc_matches = []
     for loc in locations:
         #print 'matches for ' + loc + '...'
+        dist = min(int(DIST_PER_LENGTH * len(loc)), MAX_DIST)
         ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
         for m in ms:
             m.set_string(corpus.monolith_tweet_str[m.index: m.index+m.length])
@@ -61,7 +61,7 @@ def main():
             m.set_tweet_id(id)
             m.set_loc(loc)
             m.set_true_loc(corpus.get_location_from_id(id))
-            print m.string + ' matches ' + m.loc
+            #print m.string + ' matches ' + m.loc
             #tweet = corpus.get_tweet_from_id(id)
             #print tweet
         loc_matches.append( (loc, ms) )
@@ -69,16 +69,17 @@ def main():
         #print 'number of locations processed: ' + str(i)
     print 'finished finding matches'
 
-    # post processing
+    # determining best stopword percentage
+    #per = get_max_stopword_percentage(corpus, loc_matches)
+    #print 'max per: ' + str(per)
+    # per = 0.3
     per = 0.05
-    stopword_per_to_accuracy = {}
     while per < 1.00:
         stopwords = generate_stopwords(corpus.monolith_tweet_str, per=per)
         pruned_loc_matches = remove_stopwords(loc_matches, stopwords)
-        print 'stopword percentage: ' + str(per * 100) + '%'
         accuracy = get_accuracy(pruned_loc_matches)
-        print 'accuracy after pruning: ' + str(accuracy * 100) + '%'
-        stopword_per_to_accuracy[per] = accuracy
+        print str(per*100) + '\t',
+        print str(accuracy*100)
         per += 0.05
 
     if out_file:

@@ -46,6 +46,21 @@ def get_accuracy(loc_matches):
         return 0.
     return count / num_matches
 
+def get_max_stopword_percentage(corpus, loc_matches):
+    per = 0.01
+    max_acc = 0.
+    while per < 1.00:
+        stopwords = generate_stopwords(corpus.monolith_tweet_str, per=per)
+        pruned_loc_matches = remove_stopwords(loc_matches, stopwords)
+        accuracy = get_accuracy(pruned_loc_matches)
+        if accuracy > max_acc:
+            max_acc = accuracy
+            max_per = per
+        per += 0.01
+    if max_per:
+        return max_per
+    return 0.
+
 def main():
     argv = sys.argv
     if len(argv) != 3:

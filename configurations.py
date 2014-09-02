@@ -9,3 +9,9 @@ USER_FILE = 'data/training_set_users.txt'
 
 # do we only want substrings in our trie which start with a new word
 NEW_WORD_SUBSTRINGS = True
+
+# how much edit dist will we allow per character
+DIST_PER_LENGTH = (1.0 / 10.0)
+
+# max edit distance
+MAX_DIST = 2
