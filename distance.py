@@ -14,6 +14,30 @@ def edit_dist(s, t):
         return len(t)
     if len(t) == 0:
         return len(s)
+    dists = get_edit_dist_table(s, t)
+    return dists[-1][-1]
+
+# if ends_in_space:
+#   find prefix of sub such that prefix is either all of sub
+#   or is followed by a space char, and has lowest edit dist
+#   to t
+# else:
+#   find prefix of sub with lowest edit dist to t
+def sub_edit_dist(sub, t, ends_in_space):
+    dists = get_edit_dist_table(sub, t)
+    # extract final column of table
+    col = [dists[i][-1] for i in range(len(sub)+1)]
+    min_dist = col[-1]
+    sub_len = len(sub)
+    assert min_dist == edit_dist(sub, t)
+    for j in range(len(sub)):
+        if not ends_in_space or sub[j].isspace():
+            if col[j] < min_dist:
+                min_dist = col[j]
+                sub_len = j
+    return min_dist, sub_len
+
+def get_edit_dist_table(s, t):
     # from s to t
     s = ' ' + s
     t = ' ' + t
@@ -33,7 +57,7 @@ def edit_dist(s, t):
             dists[i][j] = min(d1, d2, d3)
     s = s[1:]
     t = t[1:]
-    return dists[-1][-1]
+    return dists
 
 # c1, c2 are letters
 def equal(c1, c2):

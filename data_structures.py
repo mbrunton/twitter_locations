@@ -4,7 +4,7 @@
 
 from helper import get_lines_from_raw_twitter_data
 from helper import reduce_str, process_loc
-from distance import edit_dist, equal
+from distance import edit_dist, equal, sub_edit_dist
 
 class TwitterCorpus():
     def __init__(self, tweet_file_index, user_file):
@@ -84,7 +84,7 @@ class Trie():
         return self.root.get_matches(self.s, q, 0, ends_in_space)
 
     def get_matches_within_dist(self, q, dist, ends_in_space=False):
-        ms = self.root.get_matches_within_dist(self.s, q, dist, 0, ends_in_space)
+        ms = self.root.get_matches_within_dist(self.s, q, dist, dist, 0, ends_in_space)
         return list(set(ms))
 
     def get_depth(self):
@@ -138,72 +138,92 @@ class TrieNode():
         else:
             return self.bs[qchar].get_matches(s, q, depth+1, ends_in_space)
 
-    def get_matches_within_dist(self, s, q, dist, depth, ends_in_space):
-        if depth == len(q):
-            return self.scrape_node(ends_in_space)
-        qchar = q[depth]
+    def get_matches_within_dist(self, s, q, true_dist, dist, depth, ends_in_space):
+        if dist < 0:
+            return []
         matches = []
+        if depth >= len(q):
+            matches += self.scrape_node(ends_in_space)
+            for (schar, v) in self.bs.items():
+                if type(v) == int:
+                    index = v
+                    length = depth
+                    matches.append(Match(index, length))
+                elif isinstance(v, TrieNode):
+                    matches += v.get_matches_within_dist(s, q, true_dist, dist-1, depth+1, ends_in_space)
+            return matches
+        qchar = q[depth]
         if dist > 0:
             # add matches for deleting qchar
-            matches += self.get_matches_within_dist(s, q, dist-1, depth+1, ends_in_space)
+            matches += self.get_matches_within_dist(s, q, true_dist, dist-1, depth+1, ends_in_space)
         for item in self.bs.items():
             schar = item[0]
             v = item[1]
             if type(v) == int:
-                q_remaining = len(q) - depth
+                subq = q[depth:]
                 sub_start = v + self.true_depth
-                sub_end = sub_start + q_remaining
+                sub_end = min(sub_start + len(subq) + dist, len(s))
+                # if we want our substring to end in a space, reduce sub_end
+                # so that the character after substring is either string end or space
+                if ends_in_space:
+                    if sub_end < len(s):
+                        while sub_end >= 0 and not s[sub_end].isspace():
+                            sub_end -= 1
+                    # make sure we haven't reduced it so far that it would take more
+                    # than true_dist chars to even increase the length of substring to q
+                    if len(subq) - (sub_end-sub_start) > dist:
+                        continue
                 substring = s[sub_start: sub_end]
-                ed = edit_dist(substring, q[depth:])
+                
+                ed, sub_len = sub_edit_dist(substring, subq, ends_in_space)
+                # ed = edit_dist(substring, q[depth:])
                 if ed <= dist:
-                    # TODO: space might occur before s[sub_end]
+                    sub_end = sub_start + sub_len
+                    sub_len += self.true_depth
                     if (not ends_in_space) or sub_end >= len(s) or s[sub_end].isspace():
                         index = v
-                        length = self.true_depth
-                        matches.append(Match(index, length))
+                        matches.append(Match(index, sub_len))
             elif isinstance(v, TrieNode):
                 child = v
                 eq = equal(schar, qchar)
                 if dist > 0:
                     # insert schar
-                    matches += child.get_matches_within_dist(s, q, dist-1, depth, ends_in_space)
+                    matches += child.get_matches_within_dist(s, q, true_dist, dist-1, depth, ends_in_space)
                     # replace qchar with schar
-                    matches += child.get_matches_within_dist(s, q, dist-eq, depth+1, ends_in_space)
+                    matches += child.get_matches_within_dist(s, q, true_dist, dist-eq, depth+1, ends_in_space)
                 elif eq == 0:
                     # match qchar and schar
-                    matches += child.get_matches_within_dist(s, q, dist, depth+1, ends_in_space)
+                    matches += child.get_matches_within_dist(s, q, true_dist, dist, depth+1, ends_in_space)
         return matches
 
     def scrape_node(self, ends_in_space):
+        length = self.true_depth
         if not ends_in_space:
-            return self.scrape_node_helper()
+            return self.scrape_node_helper(length)
         else:
             matches = []
-            if type(self.bs[' ']) == int:
-                index = self.bs[' ']
-                length = self.true_depth
-                matches.append(Match(index, length))
-            elif isinstance(self.bs[' '], TrieNode):
-                matches += self.bs[' '].scrape_node_helper(match_length=self.true_depth)
-            if type(self.bs['\0']) == int:
-                index = self.bs['\0']
-                length = self.true_depth
-                matches.append(Match(index, length))
+            for k in ' \0':
+                if type(self.bs[k]) == int:
+                    index = self.bs[k]
+                    matches.append(Match(index, length))
+                elif isinstance(self.bs[k], TrieNode):
+                    matches += self.bs[k].scrape_node_helper(length)
             return matches
 
-    def scrape_node_helper(self, match_length=None):
-        indices = []
+    def scrape_node_helper(self, length, scrape_depth=None):
+        if scrape_depth == 0:
+            return []
+        matches = []
         for v in self.bs.values():
             if type(v) == int:
                 index = v
-                if match_length:
-                    length = match_length
-                else:
-                    length = self.true_depth
-                indices.append(Match(index, length))
+                matches.append(Match(index, length))
             elif isinstance(v, TrieNode):
-                indices += v.scrape_node_helper(match_length=match_length)
-        return indices
+                if scrape_depth:
+                    matches += v.scrape_node_helper(length=length, scrape_depth=scrape_depth-1)
+                else:
+                    matches += v.scrape_node_helper(length=length)
+        return matches
 
     def get_subtrie_depth(self, depth):
         subnodes = [v for v in self.bs.values() if v is not None and type(v) != int]
@@ -231,6 +251,14 @@ class Match():
 
     def set_true_loc(self, true_loc):
         self.true_loc = true_loc
+
+    def __eq__(self, other):
+        if not isinstance(other, Match):
+            return false
+        return self.index == other.index and self.length == other.length
+
+    def __hash__(self):
+        return self.index ^ self.length
 
 
 

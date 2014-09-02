@@ -70,26 +70,20 @@ def main():
     print 'finished finding matches'
 
     # determining best stopword percentage
-    #per = get_max_stopword_percentage(corpus, loc_matches)
-    #print 'max per: ' + str(per)
-    # per = 0.3
-    per = 0.05
-    while per < 1.00:
-        stopwords = generate_stopwords(corpus.monolith_tweet_str, per=per)
-        pruned_loc_matches = remove_stopwords(loc_matches, stopwords)
-        accuracy = get_accuracy(pruned_loc_matches)
-        print str(per*100) + '\t',
-        print str(accuracy*100)
-        per += 0.05
+    per = 0.3
+    stopwords = generate_stopwords(corpus.monolith_tweet_str, per=per)
+    loc_matches = remove_stopwords(loc_matches, stopwords)
+    print 'after pruning...'
+    for (loc, ms) in loc_matches:
+        for m in ms:
+            print m.string + ' matches ' + m.loc
 
     if out_file:
         out_fd = open(out_file, 'w')
-        for loc_match in loc_matches:
-            loc = loc_match[0]
+        for (loc, ms) in loc_matches:
             out_fd.write(loc + '\n')
-            ms = loc_match[1]
             for m in ms:
-                out_fd.write(str(m) + '\n')
+                out_fd.write(str(m.index) + '\n')
         out_fd.close()
 
 
