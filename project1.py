@@ -54,7 +54,7 @@ def main():
     for loc in locations:
         #print 'matches for ' + loc + '...'
         dist = min(int(DIST_PER_LENGTH * len(loc)), MAX_DIST)
-        ms = trie.get_matches_within_dist(loc, 1, ends_in_space=True)
+        ms = trie.get_matches_within_dist(loc, dist, ends_in_space=True)
         for m in ms:
             m.set_string(corpus.monolith_tweet_str[m.index: m.index+m.length])
             id = corpus.get_id_from_index(m.index)
@@ -70,13 +70,18 @@ def main():
     print 'finished finding matches'
 
     # determining best stopword percentage
-    per = 0.3
+    per = 0.7
     stopwords = generate_stopwords(corpus.monolith_tweet_str, per=per)
-    loc_matches = remove_stopwords(loc_matches, stopwords)
+    #loc_matches = remove_stopwords(loc_matches, stopwords)
     print 'after pruning...'
     for (loc, ms) in loc_matches:
         for m in ms:
-            print m.string + ' matches ' + m.loc
+            if 'sin' == m.string.strip():
+                tweet = corpus.get_tweet_from_id(m.tweet_id)
+                print tweet
+                print
+    accuracy = get_accuracy(loc_matches)
+    print 'accuracy: ' + str(accuracy * 100) + '%'
 
     if out_file:
         out_fd = open(out_file, 'w')
