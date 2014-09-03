@@ -1,6 +1,8 @@
-# Data Structures for use in Knowledge Technologies Project 1
+# Knowledge Technologies Project 1
 # Mitchell Brunton #537642
 # mmbrunton@gmail.com
+#
+# Data structures for storage and retrieval of tweets
 
 from helper import get_lines_from_raw_twitter_data
 from helper import reduce_str, process_loc
@@ -176,7 +178,6 @@ class TrieNode():
                 substring = s[sub_start: sub_end]
                 
                 ed, sub_len = sub_edit_dist(substring, subq, ends_in_space)
-                # ed = edit_dist(substring, q[depth:])
                 if ed <= dist:
                     sub_end = sub_start + sub_len
                     sub_len += self.true_depth

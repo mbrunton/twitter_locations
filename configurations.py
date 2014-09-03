@@ -13,5 +13,5 @@ NEW_WORD_SUBSTRINGS = True
 # how much edit dist will we allow per character
 DIST_PER_LENGTH = (1.0 / 10.0)
 
-# max edit distance
+# what is the max edit distance we'll allow
 MAX_DIST = 2

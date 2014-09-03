@@ -2,7 +2,8 @@
 # Mitchell Brunton #537642
 # mmbrunton@gmail.com
 #
-# Post processing of matches
+# Functions for post processing of matches after initial 
+# approximate string match
 
 from data_structures import TwitterCorpus
 from configurations import *
@@ -10,19 +11,20 @@ import nltk
 import sys
 
 # Generate list of most common words found in a sample of tweets
-def generate_stopwords(tweet_str, per=0.3):
+def generate_stopwords(tweet_str, per=0.45):
     words = tweet_str.split()
     fd = nltk.FreqDist(words)
     items = fd.items()
     stopwords = []
-    total_words = sum(fd.values())
+    total_words = len(words)
     count = 0
-    while float(count) / total_words < per:
-        word = items[0][0]
-        freq = items[0][1]
+    i = 0
+    while i < len(items) and float(count) / total_words < per:
+        word = items[i][0]
+        freq = items[i][1]
         stopwords.append(word)
         count += freq
-        items = items[1:]
+        i += 1
     return stopwords
 
 def intersect(list1, list2):
@@ -61,6 +63,8 @@ def get_max_stopword_percentage(corpus, loc_matches):
         return max_per
     return 0.
 
+# this is just for testing which stopwords are produced for different
+# text and per values
 def main():
     argv = sys.argv
     if len(argv) != 3:
@@ -72,6 +76,7 @@ def main():
     corpus = TwitterCorpus(tweet_file, USER_FILE)
     stopwords = generate_stopwords(corpus.monolith_tweet_str,per=per)
     print stopwords
+
 
 if __name__ == '__main__':
     main()

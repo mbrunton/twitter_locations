@@ -20,7 +20,7 @@ def edit_dist(s, t):
 # if ends_in_space:
 #   find prefix of sub such that prefix is either all of sub
 #   or is followed by a space char, and has lowest edit dist
-#   to t
+#   to t of all similar prefixes
 # else:
 #   find prefix of sub with lowest edit dist to t
 def sub_edit_dist(sub, t, ends_in_space):
@@ -65,6 +65,9 @@ def equal(c1, c2):
         return 0
     return 1
 	
+
+# Note: the following options were explored but were ultimately not used
+
 # EDITEX
 # returns the edit distance between two strings' editex code
 def editex_dist(s, t, letter_groups):

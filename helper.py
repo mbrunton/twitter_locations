@@ -1,6 +1,8 @@
 # Helper functions for Knowledge Technologies Project 1
 # Mitchell Brunton #537642
 # mmbrunton@gmail.com
+#
+# Utility functions
 
 import re
 import configurations
@@ -16,7 +18,7 @@ def find_nth(s, sub, n):
     return i
 
 # return list of lines of tweet rows
-# TODO: currently ignoring tweets with newlines in body
+# Note: currently ignoring tweets with newlines in body
 def get_lines_from_raw_twitter_data(tweet_file):
     fd = open(tweet_file, 'r')
     raw = fd.read()
